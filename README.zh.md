@@ -1,7 +1,7 @@
 ## 分支修改 (Forked Modification)
 修改了 [SwinJSCC](https://github.com/semcomm/SwinJSCC) 以便仅在CPU设备上部署。（如果需要在支持CUDA的设备上运行CPU模式，请修改```net```文件夹下的```device```变量。）
 
-通过CPU运行： ```python main-test.py```
+通过CPU运行： ```python main-test.py```; 修改```args.model_path``` and ```args.model_size```
 
 文件夹结构：
 ```
