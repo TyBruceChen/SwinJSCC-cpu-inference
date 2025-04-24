@@ -89,7 +89,8 @@ class CIFAR10(Dataset):
 
 def get_loader(args, config):
     if args.trainset == 'DIV2K':
-        train_dataset = HR_image(config, config.train_data_dir)
+        if args.training == True:
+            train_dataset = HR_image(config, config.train_data_dir)
         test_dataset = Datasets(config.test_data_dir)
         # test_dataset = HR_image(config, config.test_data_dir)
     elif args.trainset == 'CIFAR10':
@@ -131,13 +132,17 @@ def get_loader(args, config):
         seed += worker_id
         np.random.seed(seed)
 
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                               num_workers=NUM_DATASET_WORKERS,
-                                               pin_memory=True,
-                                               batch_size=config.batch_size,
-                                               worker_init_fn=worker_init_fn_seed,
-                                               shuffle=True,
-                                               drop_last=True)
+    if args.training  == True:
+        train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                                num_workers=NUM_DATASET_WORKERS,
+                                                pin_memory=True,
+                                                batch_size=config.batch_size,
+                                                worker_init_fn=worker_init_fn_seed,
+                                                shuffle=True,
+                                                drop_last=True)
+    else: 
+        train_loader = None
+
     if args.trainset == 'CIFAR10':
         test_loader = data.DataLoader(dataset=test_dataset,
                                   batch_size=1024,
