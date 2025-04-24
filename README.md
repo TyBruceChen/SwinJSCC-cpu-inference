@@ -18,7 +18,24 @@ Modified [SwinJSCC](https://github.com/semcomm/SwinJSCC) to deploy on ```CPU``` 
   -other files (unchanged)
 ```
 
-<b>Parameter Specification:</b> ```C``` channel number or rate, which indicates the top ```C``` channels are saved to transmit at ```embed_dim[-1]```
+<b>Parameter Specification:</b> 
+- ```C```: channel number or rate, which indicates the top ```C``` channels are saved to transmit at ```embed_dim[-1]```.
+- Compression rate: ```(1/4) ** (number of stages)``` times ```3/C from embed_dim[-1]```.
+
+<b>Test Result (Really pretty recovery):</b>
+![residential roof snow removal](https://github.com/user-attachments/assets/ae42ebfa-95bc-4320-8c50-d6cbbda92b8f)
+```
+Message: '【Channel】: Built awgn channel, SNR 10 dB.'
+Arguments: ()
+Transmitted Vector shape as:torch.Size([1, 6912, 320]) with mask selecting 96.0 channels
+2025-04-24 13:36:07,467 - INFO] Time 9.673 | CBR 0.0625 (0.0625) | SNR 10.0 | PSNR 25.471 (25.471) | MSSSIM 0.945 
+(0.945)
+SNR: [[10.0]]
+CBR: [[0.0625]]
+PSNR: [[25.470993041992188]]
+MS-SSIM: [[0.9454551339149475]]
+Finish Test!
+```
 
 
 # SwinJSCC: Taming Swin Transformer for Joint Source-Channel Coding
