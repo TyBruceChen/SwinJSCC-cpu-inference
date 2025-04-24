@@ -1,3 +1,24 @@
+## Forked Modification:
+Modified [SwinJSCC](https://github.com/semcomm/SwinJSCC) to deploy on ```CPU``` only devices. (To run on CPU on devices that have CUDA, please modify ```device``` variables in files under ```net``` folder.)
+
+<b>To run by cpu:</b> ```python main-test.py``` 
+
+<b>Folder structure:</b>
+```
+  -main-test.py (added)
+  -data
+    --datasets.py (changed)
+  -datasets
+    --cpu_inference_set (put test image here)
+  -results
+    --recon (recovered images are stored here)
+  -models (pretrained models are saved here)
+  -other files (unchanged)
+```
+
+<b>Parameter Specification:</b> ```C``` channel number or rate, which indicates the top ```C``` channels are saved to transmit at ```embed_dim[-1]```
+
+
 # SwinJSCC: Taming Swin Transformer for Joint Source-Channel Coding
 
 Official Pytorch implementation for "[SwinJSCC: Taming Swin Transformer for Deep Joint Source-Channel Coding](https://arxiv.org/abs/2308.09361)".
