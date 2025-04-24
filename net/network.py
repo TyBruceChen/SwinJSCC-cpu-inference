@@ -72,6 +72,7 @@ class SwinJSCC(nn.Module):
 
         elif self.model == 'SwinJSCC_w/_RA' or self.model == 'SwinJSCC_w/_SAandRA':
             feature, mask = self.encoder(input_image, chan_param, channel_number, self.model)
+            print(f"Transmitted Vector shape as:{feature.shape} with mask selecting {mask.count_nonzero()/feature.shape[1]} channels")
             CBR = channel_number / (2 * 3 * 2 ** (self.downsample * 2))
             avg_pwr = torch.sum(feature ** 2) / mask.sum()
             if self.pass_channel:
