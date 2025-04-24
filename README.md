@@ -3,18 +3,18 @@
 
 Modified [SwinJSCC](https://github.com/semcomm/SwinJSCC) to deploy on ```CPU``` only devices. (To run on CPU on devices that have CUDA, please modify ```device``` variables in files under ```net``` folder.)
 
-<b>To run by cpu:</b> ```python main-test.py``` 
+<b>To run by cpu:</b> ```python main-test.py```; Modify ```args.model_path``` and ```args.model_size```
 
 <b>Folder structure:</b>
 ```
   -main-test.py (added)
-  -data
+  -data/
     --datasets.py (changed)
-  -datasets
-    --cpu_inference_set (put test image here)
-  -results
-    --recon (recovered images are stored here)
-  -models (pretrained models are saved here)
+  -datasets/
+    --cpu_inference_set/ (put test image here)
+  -results/
+    --recon/ (recovered images are stored here)
+  -models/ (pretrained models are saved here)
   -other files (unchanged)
 ```
 
