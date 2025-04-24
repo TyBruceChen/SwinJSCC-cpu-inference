@@ -20,7 +20,7 @@ Modified [SwinJSCC](https://github.com/semcomm/SwinJSCC) to deploy on ```CPU``` 
 
 <b>Parameter Specification:</b> 
 - ```C```: channel number or rate, which indicates the top ```C``` channels are saved to transmit at ```embed_dim[-1]```.
-- Compression rate: ```(1/4) ** (number of stages)``` times ```3/C from embed_dim[-1]```.
+- Compression rate: ```(1/4) ** (number of stages)``` times ```C/3 from embed_dim[-1]```.
 
 <b>Test Result (Really pretty recovery):</b>
 ![residential roof snow removal](https://github.com/user-attachments/assets/ae42ebfa-95bc-4320-8c50-d6cbbda92b8f)
