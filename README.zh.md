@@ -6,13 +6,13 @@
 文件夹结构：
 ```
   -main-test.py (新增)
-  -data
+  -data/
     --datasets.py (修改)
-  -datasets
-    --cpu_inference_set (将测试图片放在此处)
-  -results
-    --recon (恢复的图片会存储在此处)
-  -models (预训练模型存储在此处)
+  -datasets/
+    --cpu_inference_set/ (将测试图片放在此处)
+  -results/
+    --recon/ (恢复的图片会存储在此处)
+  -models/ (预训练模型存储在此处)
   -其他文件 (未修改)
 ```
 
