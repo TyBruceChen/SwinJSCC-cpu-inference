@@ -1,7 +1,7 @@
 ## Forked Modification:
 [中文文档](README.zh.md)（README.zh.md）
 
-Modified [SwinJSCC](https://github.com/semcomm/SwinJSCC) to deploy on ```CPU``` only devices. Some codes and parameter configurations are removed for simplicity in <b>inference only</b>. Also, due to the fixed H-W ratio while processed with SwinTranformer, the recovered images are cropped in the original code. This fork solves this content by adding and removing padding (with compensation of little extra computation).
+Modified [SwinJSCC](https://github.com/semcomm/SwinJSCC) to deploy on ```CPU``` only devices.(To run on CPU on devices that have CUDA, please modify device variables in files under ```net``` folder.); Some codes and parameter configurations are removed for simplicity in <b>inference only</b>; Also, due to the fixed H-W ratio while processed with SwinTranformer, the recovered images are cropped in the original code. This fork solves this content by adding and removing padding (with compensation of little extra computation).
 
 <b>To run by cpu:</b> ```python main-test.py```; Download pretrained model provided by official at [Google Drive](https://drive.google.com/drive/folders/1_EouRY4yYvMCtamX2ReBzEd5YBQbyesc?usp=sharing) in your ```/models``` folder; Modify ```args.model_path``` and ```args.model_size``` to your preference. To run with GPU, modify ```args.device_type``` value as ```cuda```.
 
