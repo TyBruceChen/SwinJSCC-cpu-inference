@@ -58,7 +58,7 @@ class SwinTransformerBlock(nn.Module):
 
         H, W = self.input_resolution
         B, L, C = x.shape
-        assert L == H * W, "input feature has wrong size"
+        assert L == H * W, f"Input feature size L:{L} does not match with H:{H} * W:{W}"
 
         shortcut = x
         x = self.norm1(x)
@@ -134,7 +134,10 @@ class SwinTransformerBlock(nn.Module):
             mask_windows = mask_windows.view(-1, self.window_size * self.window_size)
             attn_mask = mask_windows.unsqueeze(1) - mask_windows.unsqueeze(2)
             attn_mask = attn_mask.masked_fill(attn_mask != 0, float(-100.0)).masked_fill(attn_mask == 0, float(0.0))
-            self.attn_mask = attn_mask.cuda()
+            if torch.cuda.is_available():
+                self.attn_mask = attn_mask.cuda()
+            else: 
+                self.attn_mask = attn_mask
         else:
             pass
 
@@ -164,11 +167,15 @@ class BasicLayer(nn.Module):
         else:
             self.downsample = None
 
-    def forward(self, x):
+    def forward(self, x, jump_layer:int = None):
         if self.downsample is not None:
             x = self.downsample(x)
-        for _, blk in enumerate(self.blocks):
+        for i, blk in enumerate(self.blocks):
             x = blk(x)
+            if jump_layer is not None: #jump up according to config during processing
+                if i == jump_layer:
+                    #print("encoder jump out")
+                    break
         return x
 
     def extra_repr(self) -> str:
@@ -271,13 +278,23 @@ class SwinJSCC_Encoder(nn.Module):
         self.sigmoid1 = nn.Sigmoid()
 
 
-    def forward(self, x, snr, rate, model):
+    def forward(self, x, snr, rate, model, block_level:int = None, 
+                device = "cuda" if torch.cuda.is_available() else "cpu",
+                train_segmentation:bool = False):
         B, C, H, W = x.size()
-        device = x.get_device()
+        #print(f"input size: {x.size()}")
         x = self.patch_embed(x)
+
+        jump_recorder = []
         for i_layer, layer in enumerate(self.layers):
-            x = layer(x)
-            print(x.mean())
+            jump_layer = None
+            if block_level is not None:
+                if i_layer >= block_level:
+                    jump_layer = 1
+            x = layer(x, jump_layer=jump_layer)
+            jump_recorder.append(jump_layer)
+            #print(x.mean())
+        print(f"Block level jump record: {jump_recorder}")
         x = self.norm(x)
 
         if model == 'SwinJSCC_w/o_SAandRA':
@@ -317,8 +334,14 @@ class SwinJSCC_Encoder(nn.Module):
             sorted, indices = mask.sort(dim=1, descending=True)
             c_indices = indices[:, :rate]
             add = torch.Tensor(range(0, B * x.size()[2], x.size()[2])).unsqueeze(1).repeat(1, rate)
-            c_indices = c_indices + add.int().cuda()
-            mask = torch.zeros(mask.size()).reshape(-1).cuda()
+
+            if torch.cuda.is_available():
+                c_indices = c_indices + add.int().cuda()
+                mask = torch.zeros(mask.size()).reshape(-1).cuda()
+            else:
+                c_indices = c_indices + add.int()
+                mask = torch.zeros(mask.size()).reshape(-1)
+
             mask[c_indices.reshape(-1)] = 1
             mask = mask.reshape(B, x.size()[2])
             mask = mask.unsqueeze(1).expand(-1, H * W // (self.num_layers ** 4), -1)
@@ -351,16 +374,23 @@ class SwinJSCC_Encoder(nn.Module):
                 temp = temp * bm
             mod_val = self.sigmoid(self.sm_list[-1](temp))
             x = x * mod_val
-            mask = torch.sum(mod_val, dim=1)
+            mask = torch.sum(mod_val, dim=1)    #mask in size [B, embed_size[-1]]
             sorted, indices = mask.sort(dim=1, descending=True)
-            c_indices = indices[:, :rate]
+            c_indices = indices[:, :rate]   #top rate indices are saved in shape [B, rate]
             add = torch.Tensor(range(0, B * x.size()[2], x.size()[2])).unsqueeze(1).repeat(1, rate)
-            c_indices = c_indices + add.int().cuda()
-            mask = torch.zeros(mask.size()).reshape(-1).cuda()
-            mask[c_indices.reshape(-1)] = 1
-            mask = mask.reshape(B, x.size()[2])
-            mask = mask.unsqueeze(1).expand(-1, H * W // (self.num_layers ** 4), -1)
+            # B is the batch size; x.size()[2] is the channel size of feature map; add is in size [B, rate]
+            if torch.cuda.is_available():
+                c_indices = c_indices + add.int().cuda()
+                mask = torch.zeros(mask.size()).reshape(-1).cuda()
+            else:
+                c_indices = c_indices + add.int()
+                mask = torch.zeros(mask.size()).reshape(-1)
 
+            mask[c_indices.reshape(-1)] = 1 #c_indices indicate which element are modified to 1
+            mask = mask.reshape(B, x.size()[2]) #reshape the 1-D tensor back to 2d vector with size [B, embed_size[-1]]
+            mask = mask.unsqueeze(1).expand(-1, H * W // (self.num_layers ** 4), -1)
+            # extend the 2D 1*1*embed_size[-1] channel map to 3D 1*L*embed_size[-1] feature map,
+            #   where L is H//(2**self.num_layers) * W//(2**self.num_layers) 
             x = x * mask
             return x, mask
 

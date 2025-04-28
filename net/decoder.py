@@ -30,9 +30,21 @@ class BasicLayer(nn.Module):
         else:
             self.upsample = None
 
-    def forward(self, x):
-        for _, blk in enumerate(self.blocks):
+    def forward(self, x, jump_layer:int = None):
+        for i, blk in enumerate(self.blocks):
+            """
+            if jump_layer is not None: #jump up according to config during processing
+                if i <= self.depth- jump_layer - 1: #reverse the jump order at decoder
+                    #print("jump out")
+                    continue
+                #print("jump out")
             x = blk(x)
+            """
+            x = blk(x)
+            if jump_layer is not None: #jump up according to config during processing
+                if i == jump_layer:
+                    #print("decoder jump out")
+                    break
 
         if self.upsample is not None:
             x = self.upsample(x)
@@ -114,46 +126,32 @@ class SwinJSCC_Decoder(nn.Module):
             self.sm_list.append(nn.Linear(self.hidden_dim, outdim))
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x, snr, model):
+    def forward(self, x, snr, model, block_level:int = None, 
+                device = "cuda" if torch.cuda.is_available() else "cpu"):
         if model == 'SwinJSCC_w/o_SAandRA':
             x = self.head_list(x)
-            for i_layer, layer in enumerate(self.layers):
-                x = layer(x)
-            B, L, N = x.shape
-            x = x.reshape(B, self.H, self.W, N).permute(0, 3, 1, 2)
-            return x
-
+            pass
         elif model == 'SwinJSCC_w/_SA':
             B, L, C = x.size()
-            device = x.get_device()
             x = self.head_list(x)
             snr_cuda = torch.tensor(snr, dtype=torch.float).to(device)
             snr_batch = snr_cuda.unsqueeze(0).expand(B, -1)
             for i in range(self.layer_num):
                 if i == 0:
-                    temp = self.sm_list[i](x.detach())
+                    temp = self.sm_list[i](x)#.detach())
                 else:
                     temp = self.sm_list[i](temp)
                 bm = self.bm_list[i](snr_batch).unsqueeze(1).expand(-1, L, -1)
                 temp = temp * bm
             mod_val = self.sigmoid(self.sm_list[-1](temp))
             x = x * mod_val
-            for i_layer, layer in enumerate(self.layers):
-                x = layer(x)
-            B, L, N = x.shape
-            x = x.reshape(B, self.H, self.W, N).permute(0, 3, 1, 2)
-            return x
+            pass
 
         elif model == 'SwinJSCC_w/_RA':
-            for i_layer, layer in enumerate(self.layers):
-                x = layer(x)
-            B, L, N = x.shape
-            x = x.reshape(B, self.H, self.W, N).permute(0, 3, 1, 2)
-            return x
+            pass
 
         elif model == 'SwinJSCC_w/_SAandRA':
             B, L, C = x.size()
-            device = x.get_device()
             snr_cuda = torch.tensor(snr, dtype=torch.float).to(device)
             snr_batch = snr_cuda.unsqueeze(0).expand(B, -1)
             for i in range(self.layer_num):
@@ -166,7 +164,11 @@ class SwinJSCC_Decoder(nn.Module):
             mod_val = self.sigmoid(self.sm_list[-1](temp))
             x = x * mod_val
             for i_layer, layer in enumerate(self.layers):
-                x = layer(x)
+                jump_layer = None
+                if block_level is not None:
+                    if i_layer >= block_level:
+                        jump_layer = 1
+                x = layer(x, jump_layer=jump_layer)
             B, L, N = x.shape
             x = x.reshape(B, self.H, self.W, N).permute(0, 3, 1, 2)
             return x

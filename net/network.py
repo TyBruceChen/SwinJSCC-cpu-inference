@@ -5,6 +5,7 @@ from net.channel import Channel
 from random import choice
 import torch.nn as nn
 
+import time
 
 class SwinJSCC(nn.Module):
     def __init__(self, args, config):
@@ -42,9 +43,14 @@ class SwinJSCC(nn.Module):
         noisy_feature = self.channel.forward(feature, chan_param, avg_pwr)
         return noisy_feature
 
-    def forward(self, input_image, given_SNR=None, given_rate=None):
+    def forward(self, input_image, given_SNR=None, given_rate=None,
+                 block_level:int = None, original_size:tuple = None,
+                 train_segmentation:bool = False, 
+                 device =  "cuda" if torch.cuda.is_available() else "cpu"):
         B, _, H, W = input_image.shape
-
+        
+        start_time = time.time()
+        #self.config.logger.info(f"H:{H}, W:{W}")
         if H != self.H or W != self.W:
             self.encoder.update_resolution(H, W)
             self.decoder.update_resolution(H // (2 ** self.downsample), W // (2 ** self.downsample))
@@ -63,7 +69,8 @@ class SwinJSCC(nn.Module):
             channel_number = given_rate
 
         if self.model == 'SwinJSCC_w/o_SAandRA' or self.model == 'SwinJSCC_w/_SA':
-            feature = self.encoder(input_image, chan_param, channel_number, self.model)
+            feature = self.encoder(input_image, chan_param, channel_number, self.model, 
+                                   block_level = block_level, train_segmentation=train_segmentation)
             CBR = feature.numel() / 2 / input_image.numel()
             if self.pass_channel:
                 noisy_feature = self.feature_pass_channel(feature, chan_param)
@@ -71,17 +78,24 @@ class SwinJSCC(nn.Module):
                 noisy_feature = feature
 
         elif self.model == 'SwinJSCC_w/_RA' or self.model == 'SwinJSCC_w/_SAandRA':
-            feature, mask = self.encoder(input_image, chan_param, channel_number, self.model)
+            feature, mask = self.encoder(input_image, chan_param, channel_number, self.model, 
+                                         block_level = block_level, train_segmentation=train_segmentation, 
+                                         device=device)
             print(f"Transmitted Vector shape as:{feature.shape} with mask selecting {mask.count_nonzero()/feature.shape[1]} channels")
             CBR = channel_number / (2 * 3 * 2 ** (self.downsample * 2))
             avg_pwr = torch.sum(feature ** 2) / mask.sum()
-            if self.pass_channel:
+            if self.pass_channel:   #apply simulated channel to the feature, chan_param is the SNR
                 noisy_feature = self.feature_pass_channel(feature, chan_param, avg_pwr)
             else:
                 noisy_feature = feature
             noisy_feature = noisy_feature * mask
 
-        recon_image = self.decoder(noisy_feature, chan_param, self.model)
+        recon_image = self.decoder(noisy_feature, chan_param, self.model, block_level = block_level, device=device)
+        print(f"Consumed_time: {time.time() - start_time}, model_block_level: {block_level}")
+        if original_size:
+            original_h, original_w = original_size
+            recon_image = recon_image[:, :, 0:original_w, 0:original_h]
+            input_image = input_image[:, :, 0:original_w, 0:original_h]
         mse = self.squared_difference(input_image * 255., recon_image.clamp(0., 1.) * 255.)
         loss_G = self.distortion_loss.forward(input_image, recon_image.clamp(0., 1.))
         return recon_image, CBR, chan_param, mse.mean(), loss_G.mean()
