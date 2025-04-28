@@ -50,13 +50,14 @@ class HR_image(Dataset):
 
 
 class Datasets(Dataset):
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, crop_or_pad='pad'):
         self.data_dir = data_dir
         self.imgs = []
         for dir in self.data_dir:
             self.imgs += glob(os.path.join(dir, '*.jpg'))
             self.imgs += glob(os.path.join(dir, '*.png'))
         self.imgs.sort()
+        self.crop_or_pad = crop_or_pad
 
 
     def __getitem__(self, item):
@@ -64,14 +65,24 @@ class Datasets(Dataset):
         name = os.path.basename(image_ori)
         image = Image.open(image_ori).convert('RGB')
         self.im_height, self.im_width = image.size
-        if self.im_height % 128 != 0 or self.im_width % 128 != 0:
-            self.im_height = self.im_height - self.im_height % 128
-            self.im_width = self.im_width - self.im_width % 128
+        original_size = image.size
+        if self.crop_or_pad == 'crop':
+            if self.im_height % 128 != 0 or self.im_width % 128 != 0:
+                self.im_height = self.im_height - self.im_height % 128
+                self.im_width = self.im_width - self.im_width % 128
+            image = transforms.CenterCrop((self.im_width, self.im_height))(image)
+        else:
+            padding_height = 128 - (image.size[0] % 128) if image.size[0] % 128 != 0 else 0
+            padding_width = 128 - (image.size[1] % 128) if image.size[1] % 128 != 0 else 0
+            if padding_height > 0 or padding_width > 0:
+                image = transforms.Pad((0, 0, padding_height, padding_width))(image) 
+                    #four digits are padding for the left, top, right and bottom borders respectively.
+
         self.transform = transforms.Compose([
-            transforms.CenterCrop((self.im_width, self.im_height)),
             transforms.ToTensor()])
         img = self.transform(image)
-        return img, name
+        #print(original_size)
+        return img, name, original_size
     def __len__(self):
         return len(self.imgs)
 
