@@ -22,14 +22,15 @@ class args:
     C = '96'    # Number of channels in the encoder
     multiple_snr = '10'
     model_size = 'small'
-    model_path = 'models/SwinJSCC w- SA&RA/pretrained_SwinJSCC_w_SAandRA_small_AWGN_HRimage_cbr_psnr_snr13.model'
-    device_type = 'cpu'
+    model_path = 'models/SwinJSCC w- SA&RA/SwinJSCC_w_SAandRA_small_AWGN_HRimage_cbr_psnr_snr.model'
+    test_data_dir = ['datasets/DIV2K_test_10_samples']
+    device_type = 'cpu' #'cuda' or 'cpu'
 
 class config():
     seed = 42
     pass_channel = True
     CUDA = True
-    device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
+    device = args.device_type   #torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
     norm = False
     # logger
     filename = 'log'#datetime.now().__str__()[:-7]
@@ -45,7 +46,7 @@ class config():
 
     image_dims = (3, 256, 256)
     if args.testset == 'test':
-        test_data_dir = ["datasets/cpu_inference_set"]
+        test_data_dir = args.test_data_dir
 
     batch_size = 16
     downsample = 4
@@ -129,12 +130,16 @@ def test():
         for j, rate in enumerate(channel_number):
             with torch.no_grad():
                 for batch_idx, batch in enumerate(test_loader):
-                    input, names = batch
+                    input, names, original_size = batch
                     start_time = time.time()
                     input = input.to(args.device_type) #.cuda()
-                    recon_image, CBR, SNR, mse, loss_G = net(input, SNR, rate)
-                    torchvision.utils.save_image(recon_image,
-                                                    os.path.join("results", f"recon/{names[0]}"))
+                    recon_image, CBR, SNR, mse, loss_G = net(input, SNR, rate, 
+                            original_size=original_size, device=args.device_type)
+                    H, W = original_size
+                    #recon_image = recon_image[:,:,0:W, 0:H]
+                    input = input[:,:,0:W, 0:H]
+                    torchvision.utils.save_image(recon_image[:,:,0:W, 0:H], 
+                                                 os.path.join("results", f"recon/{names[0]}"))
                     elapsed.update(time.time() - start_time)
                     cbrs.update(CBR)
                     snrs.update(SNR)
@@ -144,7 +149,7 @@ def test():
                         msssim = 1 - CalcuSSIM(input, recon_image.clamp(0., 1.)).mean().item()
                         msssims.update(msssim)
                         MSSSIM = -10 * np.emath.log10(1 - msssim)
-                        print(MSSSIM)
+                        #print(MSSSIM)
                     else:
                         psnrs.update(100)
                         msssims.update(100)
@@ -183,6 +188,4 @@ if __name__ == '__main__':
     if args.training:
         print('This file is for cpu inference only! please use main.py for training!')
     else:
-        os.makedirs('results', exist_ok=True,)
-        os.makedirs('results/recon', exist_ok=True,)
         test()
