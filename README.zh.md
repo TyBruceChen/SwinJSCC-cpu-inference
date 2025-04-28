@@ -1,5 +1,5 @@
 ## 分支修改 (Forked Modification)
-修改了 [SwinJSCC](https://github.com/semcomm/SwinJSCC) 以便仅在CPU设备上部署。在源代码中，由于使用 SwinTransformer 处理时固定的高宽比，恢复的图像会被裁剪。此分支通过添加和移除填充（padding）来保留原始像素内容以修复此问题（但计算量会略微有所增加）。不必要的代码和参数设置已被删除（仅为推理，非训练目的）。
+修改了 [SwinJSCC](https://github.com/semcomm/SwinJSCC) 以便仅在CPU设备上部署(如果需要在支持CUDA的设备上运行CPU模式，请修改net文件夹下的device变量，如若在GPU上运行，修改```args.device_type```为```cuda```即可)。在源代码中，由于使用 SwinTransformer 处理时固定的高宽比，恢复的图像会被裁剪。此分支通过添加和移除填充（padding）来保留原始像素内容以修复此问题（但计算量会略微有所增加）。不必要的代码和参数设置已被删除（仅为推理，非训练目的）。
 
 通过CPU运行：```python main-test.py```; 在[Google Drive](https://drive.google.com/drive/folders/1_EouRY4yYvMCtamX2ReBzEd5YBQbyesc?usp=sharing)下载由官方提供的预训练模型于```/models```文件夹中; 修改```args.model_path``` and ```args.model_size```为你的偏好；若改为使用 gpu 运行， 请设置```args.device_type```为```cuda```。
 
