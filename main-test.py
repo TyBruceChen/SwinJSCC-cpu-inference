@@ -188,4 +188,6 @@ if __name__ == '__main__':
     if args.training:
         print('This file is for cpu inference only! please use main.py for training!')
     else:
+        os.makedirs('results', exist_ok=True,)
+        os.makedirs('results/recon', exist_ok=True,)
         test()
