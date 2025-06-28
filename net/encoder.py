@@ -375,7 +375,7 @@ class SwinJSCC_Encoder(nn.Module):
             mod_val = self.sigmoid(self.sm_list[-1](temp))
             x = x * mod_val
             mask = torch.sum(mod_val, dim=1)    #mask in size [B, embed_size[-1]]
-            sorted, indices = mask.sort(dim=1, descending=True)
+            sorted, indices = mask.sort(dim=1, descending=True, stable = True)
             c_indices = indices[:, :rate]   #top rate indices are saved in shape [B, rate]
             add = torch.Tensor(range(0, B * x.size()[2], x.size()[2])).unsqueeze(1).repeat(1, rate)
             # B is the batch size; x.size()[2] is the channel size of feature map; add is in size [B, rate]
